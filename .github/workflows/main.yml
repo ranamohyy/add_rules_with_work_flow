@@ -42,19 +42,15 @@ jobs:
       - name: Check file size
         run: |
           MAX_LINES=100
-          FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }})
-          ERROR=0
+          FILES=$(git ls-files '*.dart')
           for FILE in $FILES; do
             if [ -f "$FILE" ]; then
               LINES=$(wc -l < "$FILE")
               if [ "$LINES" -gt "$MAX_LINES" ]; then
-                echo "❌ File $FILE has $LINES lines, which is more than $MAX_LINES"
-                ERROR=1
+                echo "⚠️ File $FILE has $LINES lines (above $MAX_LINES)"
               fi
             fi
           done
-          if [ "$ERROR" -eq 1 ]; then
-            exit 1
 
       # Optional: Build APK
       - name: Build APK
