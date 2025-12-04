@@ -1,0 +1,84 @@
+name: Flutter Feature Branch CI/CD
+
+on:
+  push:
+    branches:
+      - 'feature/**'  
+      - develop
+  pull_request:
+    branches:
+      - develop   
+jobs:
+  flutter_ci:
+    runs-on: ubuntu-latest
+    
+    steps:
+      # Checkout code
+      - uses: actions/checkout@v3
+
+      # Setup Flutter
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.38.0'
+
+      #  Install dependencies
+      - name: Get Dependencies
+        run: flutter pub get
+
+      #  Run lint
+      - name: Lint
+        run: flutter analyze
+
+      #  Check format
+      - name: Format Check
+        run: flutter format --set-exit-if-changed .
+
+      #  Run tests
+      - name: Run Tests
+        run: flutter test --coverage
+
+      #  Check max lines per file
+      - name: Check file size
+        run: |
+          MAX_LINES=100
+          FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }})
+          ERROR=0
+          for FILE in $FILES; do
+            if [ -f "$FILE" ]; then
+              LINES=$(wc -l < "$FILE")
+              if [ "$LINES" -gt "$MAX_LINES" ]; then
+                echo "❌ File $FILE has $LINES lines, which is more than $MAX_LINES"
+                ERROR=1
+              fi
+            fi
+          done
+          if [ "$ERROR" -eq 1 ]; then
+            exit 1
+
+      # Optional: Build APK
+      - name: Build APK
+        run: flutter build apk --debug
+
+      #  Notification to me
+      - name: Slack Notification on Failure
+        if: failure()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          fields: repo,message,commit,author
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.MY_SLACK_WEBHOOK }}
+
+  #  Prevent merge to main from non-develop branches
+  check_merge_source:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ensure PR to main comes from develop
+        if: github.event_name == 'pull_request'
+        run: |
+          if [ "${{ github.event.pull_request.base.ref }}" == "main" ]; then
+            if [ "${{ github.event.pull_request.head.ref }}" != "develop" ]; then
+              echo "❌ You can only merge into main from develop!"
+              exit 1
+            fi
