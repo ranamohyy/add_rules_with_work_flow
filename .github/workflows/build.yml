@@ -11,6 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -32,6 +34,14 @@ jobs:
 
       - name: Build APK Release
         run: flutter build apk --release
+
+      - name: Upload APK Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+           name: apk-builds
+           path: |
+             build/app/outputs/flutter-apk/*.apk
+
 
       - name: Build iOS Debug
         if: runner.os == 'macOS'
