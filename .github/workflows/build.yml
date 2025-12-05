@@ -1,9 +1,9 @@
 name: build apk for android and ios
 on:
-  - workflow_run:
-      workflows: [ "Flutter Lint & Tests" ]
-      types:
-        - completed
+  workflow_run:
+    workflows: ["Flutter Lint & Tests"]
+    types:
+      - completed
 
 jobs:
   build_app:
