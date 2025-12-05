@@ -1,9 +1,9 @@
 name: build apk for android and ios
 on:
-  - workflow_run:
-      workflows: [ "Flutter Lint & Tests" ]
-      types:
-        - completed
+  workflow_run:
+    workflows: ["Flutter Lint & Tests"]
+    types:
+      - completed
 
 jobs:
   build_app:
@@ -26,7 +26,7 @@ jobs:
             ${{ runner.os }}-pub-
 
       - name: Get Dependencies
-      - run: flutter pub get
+        run: flutter pub get
 
       - name: Build APK Debug
         run: flutter build apk --debug
