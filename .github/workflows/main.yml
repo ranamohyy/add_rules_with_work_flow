@@ -8,8 +8,7 @@ on:
       - "lib/**"
       - "pubspec.yaml"
       - "pubspec.lock"
-      - "main.yml"
-
+      - ".github/workflows/main.yml"
   pull_request:
     branches:
       - develop
