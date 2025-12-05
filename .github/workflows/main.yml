@@ -1,4 +1,4 @@
-name: Flutter CI/CD Full
+name: Flutter Lint & Tests
 on:
   push:
     branches:
@@ -64,4 +64,3 @@ jobs:
         if: steps.test_check.outputs.run_tests == 'true'
         run: flutter test --coverage
 
- 
