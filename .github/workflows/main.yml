@@ -1,4 +1,4 @@
-name: Flutter CI/CD Full
+name: Flutter Lint & Tests
 on:
   push:
     branches:
@@ -9,6 +9,8 @@ on:
       - "pubspec.yaml"
       - "pubspec.lock"
       - ".github/workflows/main.yml"
+      - ".github/workflows/build.yml"
+      - ".github/workflows/check-merge-main.yml"
   pull_request:
     branches:
       - develop
@@ -64,30 +66,3 @@ jobs:
         if: steps.test_check.outputs.run_tests == 'true'
         run: flutter test --coverage
 
-      # Build APK (Debug & Release)
-      - name: Build APK Debug
-        run: flutter build apk --debug
-
-      - name: Build APK Release
-        run: flutter build apk --release
-
-      # Build iOS (Debug & Release)
-      - name: Build iOS Debug
-        if: runner.os == 'macOS'
-        run: flutter build ios --debug --no-codesign
-
-      - name: Build iOS Release
-        if: runner.os == 'macOS'
-        run: flutter build ios --release --no-codesign
-
-  # Prevent merge to main from non-develop branches
-  check_merge_source:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Ensure PR to main comes from develop
-        if: github.event_name == 'pull_request'
-        run: |
-          if [ "${{ github.event.pull_request.base.ref }}" == "main" ]; then
-            if [ "${{ github.event.pull_request.head.ref }}" != "develop" ]; then
-              echo "❌ You can only merge into main from develop!"
-              exit 1

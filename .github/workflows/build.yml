@@ -1,0 +1,44 @@
+name: build apk for android and ios
+on:
+  - workflow_run:
+      workflows: [ "Flutter Lint & Tests" ]
+      types:
+        - completed
+
+jobs:
+  build_app:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.38.0'
+
+      #Cache packages
+      - name: Cache Pub Packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.pub-cache
+          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pub-
+
+      - name: Get Dependencies
+      - run: flutter pub get
+
+      - name: Build APK Debug
+        run: flutter build apk --debug
+
+      - name: Build APK Release
+        run: flutter build apk --release
+
+      - name: Build iOS Debug
+        if: runner.os == 'macOS'
+        run: flutter build ios --debug --no-codesign
+
+      - name: Build iOS Release
+        if: runner.os == 'macOS'
+        run: flutter build ios --release --no-codesign
+
