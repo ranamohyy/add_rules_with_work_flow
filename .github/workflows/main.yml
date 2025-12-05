@@ -4,11 +4,11 @@ on:
     branches:
       - "feature/**"
       - develop
-    paths:
-      - "lib/**"
-      - "pubspec.yaml"
-      - "pubspec.lock"
-
+#    paths:
+#      - "lib/**"
+#      - "pubspec.yaml"
+#      - "pubspec.lock"
+#
   pull_request:
     branches:
       - develop
