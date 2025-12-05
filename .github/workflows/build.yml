@@ -1,4 +1,4 @@
-name: build apk for android and ios
+name: Build APK & iOS
 on:
   workflow_run:
     workflows: ["Flutter Lint & Tests"]
@@ -16,7 +16,6 @@ jobs:
         with:
           flutter-version: '3.38.0'
 
-      #Cache packages
       - name: Cache Pub Packages
         uses: actions/cache@v3
         with:
@@ -41,4 +40,3 @@ jobs:
       - name: Build iOS Release
         if: runner.os == 'macOS'
         run: flutter build ios --release --no-codesign
-
