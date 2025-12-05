@@ -58,6 +58,7 @@ jobs:
             echo "run_tests=true" >> $GITHUB_OUTPUT
           else
             echo "run_tests=false" >> $GITHUB_OUTPUT
+          fi
       # Run Tests if needed
       - name: Run Tests
         if: steps.test_check.outputs.run_tests == 'true'
