@@ -10,7 +10,7 @@ on:
       - "pubspec.lock"
       - ".github/workflows/main.yml"
       - ".github/workflows/build.yml"
-      - ".github/workflows/check-merge-main.yml"
+      - ".github/workflows/check-pr.yml"
   pull_request:
     branches:
       - develop
