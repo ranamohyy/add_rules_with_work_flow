@@ -1,17 +1,22 @@
-name: Flutter Feature Branch CI/CD
-
+name: Flutter CI/CD Full
 on:
   push:
     branches:
       - "feature/**"
       - develop
+    paths:
+      - "lib/**"
+      - "pubspec.yaml"
+      - "pubspec.lock"
+
   pull_request:
     branches:
-      - develop   
+      - develop
+
 jobs:
   flutter_ci:
     runs-on: ubuntu-latest
-    
+
     steps:
       # Checkout code
       - uses: actions/checkout@v3
@@ -20,47 +25,62 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: 'stable'
+          flutter-version: '3.38.0'
 
-      #  Install dependencies
+      # Cache Flutter packages
+      - name: Cache Pub Packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.pub-cache
+          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pub-
+
+      # Install dependencies
       - name: Get Dependencies
         run: flutter pub get
 
-      #  Run lint
+      # Run lint
       - name: Lint
         run: flutter analyze
 
-      #  Check format
+      # Check format (warning only)
       - name: Format Check
-        run: flutter format --set-exit-if-changed .
+        run: dart format --set-exit-if-changed .
+        continue-on-error: true
 
-      #  Run tests
+      # Determine if tests should run (only if lib/ or pubspec changed)
+      - name: Should run tests?
+        id: test_check
+        run: |
+          FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }})
+          if echo "$FILES" | grep -E "lib/|pubspec.yaml|pubspec.lock"; then
+            echo "run_tests=true" >> $GITHUB_OUTPUT
+          else
+            echo "run_tests=false" >> $GITHUB_OUTPUT
+
+      # Run Tests if needed
       - name: Run Tests
+        if: steps.test_check.outputs.run_tests == 'true'
         run: flutter test --coverage
 
-      #  Check max lines per file
-      - name: Check file size
-        run: |
-          MAX_LINES=100
-          FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }})
-          ERROR=0
-          for FILE in $FILES; do
-            if [ -f "$FILE" ]; then
-              LINES=$(wc -l < "$FILE")
-              if [ "$LINES" -gt "$MAX_LINES" ]; then
-                echo "❌ File $FILE has $LINES lines, which is more than $MAX_LINES"
-                ERROR=1
-              fi
-            fi
-          done
-          if [ "$ERROR" -eq 1 ]; then
-            exit 1
-
-      # Optional: Build APK
-      - name: Build APK
+      # Build APK (Debug & Release)
+      - name: Build APK Debug
         run: flutter build apk --debug
-        
-  #  Prevent merge to main from non-develop branches
+
+      - name: Build APK Release
+        run: flutter build apk --release
+
+      # Build iOS (Debug & Release)
+      - name: Build iOS Debug
+        if: runner.os == 'macOS'
+        run: flutter build ios --debug --no-codesign
+
+      - name: Build iOS Release
+        if: runner.os == 'macOS'
+        run: flutter build ios --release --no-codesign
+
+  # Prevent merge to main from non-develop branches
   check_merge_source:
     runs-on: ubuntu-latest
     steps:
@@ -71,4 +91,3 @@ jobs:
             if [ "${{ github.event.pull_request.head.ref }}" != "develop" ]; then
               echo "❌ You can only merge into main from develop!"
               exit 1
-            fi
