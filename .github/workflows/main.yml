@@ -47,9 +47,9 @@ jobs:
       - name: Get Dependencies
         run: flutter pub get
 
-      # Run lint
+      # Run lint (ignore Flutter SDK errors)
       - name: Lint
-        run: flutter analyze
+        run: flutter analyze lib test
 
       # Check format (warning only)
       - name: Format Check
