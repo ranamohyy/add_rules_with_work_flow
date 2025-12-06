@@ -9,7 +9,7 @@ on:
     branches:
       - develop
       - main
-  # ----------------------- FLUTTER CI -----------------------
+
 jobs:
   flutter_ci:
     runs-on: ubuntu-latest
@@ -17,6 +17,7 @@ jobs:
       # Checkout code
       - uses: actions/checkout@v3
 
+      # Clear Flutter cache (temporary - remove after first successful run)
       - name: Clear Flutter cache
         run: |
           rm -rf $HOME/.flutter
@@ -26,7 +27,49 @@ jobs:
       - name: Read FVM config
         id: fvm
         run: |
-          FLUTTER_VERSION=$(cat .fvm/fvm_config.json | grep -o '"flutterSdkVersion": *"[^"]*"' | grep -o '"[^"]*"$' | tr -d '"')
+          FLUTTER_VERSION=$(cat .fvm/fvm_config.json | grep -o '"flutterSdkVersion": *"[^"]*"' | grep -o '"[^"]*"
+
+      # Setup Flutter with FVM version (NO CACHE!)
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ steps.fvm.outputs.version }}
+          channel: 'stable'
+          cache: false  
+
+      - name: Check Flutter Version
+        run: flutter --version
+
+      # NO PUB CACHE - حذفناها خالص!
+
+      # Install dependencies
+      - name: Get Dependencies
+        run: flutter pub get
+
+      # Run lint
+      - name: Lint
+        run: flutter analyze
+
+      # Check format (warning only)
+      - name: Format Check
+        run: dart format --set-exit-if-changed .
+        continue-on-error: true
+
+      # Determine if tests should run
+      - name: Should run tests?
+        id: test_check
+        run: |
+          FILES=$(git ls-files '*.dart' 'pubspec.yaml' 'pubspec.lock')
+          if echo "$FILES" | grep -E "lib/|pubspec.yaml|pubspec.lock"; then
+            echo "run_tests=true" >> $GITHUB_OUTPUT
+          else
+            echo "run_tests=false" >> $GITHUB_OUTPUT
+          fi
+
+      # Run Tests if needed
+      - name: Run Tests
+        if: steps.test_check.outputs.run_tests == 'true'
+        run: flutter test --coverage | tr -d '"')
           echo "version=$FLUTTER_VERSION" >> $GITHUB_OUTPUT
           echo "✅ Using Flutter version from FVM: $FLUTTER_VERSION"
 
@@ -47,7 +90,6 @@ jobs:
         with:
           path: ~/.pub-cache
           key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
-
           restore-keys: |
             ${{ runner.os }}-pub-
 
