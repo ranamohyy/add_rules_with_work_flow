@@ -1,0 +1,68 @@
+name: Build APK & iOS
+
+on:
+  workflow_run:
+    workflows: ["Flutter Lint & Tests"]
+    types: [completed]
+
+jobs:
+
+  # ----------------------- ANDROID BUILD -----------------------
+  build_android:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.6.2'
+
+      - name: Cache Pub Packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.pub-cache
+          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
+
+      - name: Get Dependencies
+        run: flutter pub get
+
+      - name: Build APK Debug
+        run: flutter build apk --debug
+
+      - name: Build APK Release
+        run: flutter build apk --release
+
+      - name: Upload APK Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: apk-builds
+          path: build/app/outputs/flutter-apk/*.apk
+
+  # ----------------------- IOS BUILD -----------------------
+  build_ios:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.38.4'
+
+      - name: Get Dependencies
+        run: flutter pub get
+
+      - name: Build iOS Debug
+        run: flutter build ios --debug --no-codesign
+
+      - name: Build iOS Release
+        run: flutter build ios --release --no-codesign
