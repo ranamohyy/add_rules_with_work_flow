@@ -16,20 +16,30 @@ jobs:
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
 
-      # Clear ALL Flutter cache FIRST
-      - name: Clear ALL Flutter cache
-        run: |
-          sudo rm -rf /opt/hostedtoolcache/flutter
-          rm -rf $HOME/.flutter
-          rm -rf $HOME/.pub-cache
-          rm -rf /usr/local/bin/flutter
-          echo "✅ All Flutter cache cleared!"
-
       # Read Flutter version from FVM config
       - name: Read FVM config
         id: fvm
         run: |
-          FLUTTER_VERSION=$(cat .fvm/fvm_config.json | grep -o '"flutterSdkVersion": *"[^"]*"' | grep -o '"[^"]*"
+          FLUTTER_VERSION=$(cat .fvm/fvm_config.json | grep -o '"flutterSdkVersion": *"[^"]*"' | grep -o '"[^"]*"$' | tr -d '"')
+          echo "version=$FLUTTER_VERSION" >> $GITHUB_OUTPUT
+          echo "✅ Target Flutter version from FVM: $FLUTTER_VERSION"
+
+      # Download Flutter MANUALLY from Google Storage
+      - name: Download Flutter manually
+        run: |
+          FLUTTER_VERSION=${{ steps.fvm.outputs.version }}
+          echo "Downloading Flutter $FLUTTER_VERSION for Linux..."
+          
+          wget -q https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_${FLUTTER_VERSION}-stable.tar.xz
+          tar xf flutter_linux_${FLUTTER_VERSION}-stable.tar.xz
+          
+          echo "$GITHUB_WORKSPACE/flutter/bin" >> $GITHUB_PATH
+          echo "✅ Flutter downloaded and added to PATH"
+
+      - name: Verify Flutter Version
+        run: |
+          flutter --version
+          dart --version
 
       - name: Get Dependencies
         run: flutter pub get
@@ -55,89 +65,30 @@ jobs:
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
 
-      # Clear Flutter cache (temporary - remove after first successful run)
-      - name: Clear Flutter cache
-        run: |
-          rm -rf $HOME/.flutter
-          rm -rf ${{ runner.tool_cache }}/flutter
-
       # Read Flutter version from FVM config
       - name: Read FVM config
         id: fvm
         run: |
           FLUTTER_VERSION=$(cat .fvm/fvm_config.json | grep -o '"flutterSdkVersion": *"[^"]*"' | grep -o '"[^"]*"$' | tr -d '"')
           echo "version=$FLUTTER_VERSION" >> $GITHUB_OUTPUT
-          echo "✅ Using Flutter version from FVM: $FLUTTER_VERSION"
+          echo "✅ Target Flutter version from FVM: $FLUTTER_VERSION"
 
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: ${{ steps.fvm.outputs.version }}
-          channel: 'stable'
-          cache: false
-
-      - name: Get Dependencies
-        run: flutter pub get
-
-      - name: Build iOS Debug
-        run: flutter build ios --debug --no-codesign
-
-      - name: Build iOS Release
-        run: flutter build ios --release --no-codesign | tr -d '"')
-          echo "version=$FLUTTER_VERSION" >> $GITHUB_OUTPUT
-          echo "✅ Using Flutter version from FVM: $FLUTTER_VERSION"
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: ${{ steps.fvm.outputs.version }}
-          channel: 'stable'
-          cache: false
-
-      - name: Get Dependencies
-        run: flutter pub get
-
-      - name: Build APK Debug
-        run: flutter build apk --debug
-
-      - name: Build APK Release
-        run: flutter build apk --release
-
-      - name: Upload APK Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: apk-builds
-          path: build/app/outputs/flutter-apk/*.apk
-
-  # ----------------------- IOS BUILD -----------------------
-  build_ios:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          ref: ${{ github.event.workflow_run.head_sha }}
-
-      # Clear Flutter cache (temporary - remove after first successful run)
-      - name: Clear Flutter cache
+      # Download Flutter MANUALLY for macOS
+      - name: Download Flutter manually
         run: |
-          rm -rf $HOME/.flutter
-          rm -rf ${{ runner.tool_cache }}/flutter
+          FLUTTER_VERSION=${{ steps.fvm.outputs.version }}
+          echo "Downloading Flutter $FLUTTER_VERSION for macOS..."
+          
+          wget -q https://storage.googleapis.com/flutter_infra_release/releases/stable/macos/flutter_macos_${FLUTTER_VERSION}-stable.zip
+          unzip -q flutter_macos_${FLUTTER_VERSION}-stable.zip
+          
+          echo "$GITHUB_WORKSPACE/flutter/bin" >> $GITHUB_PATH
+          echo "✅ Flutter downloaded and added to PATH"
 
-      # Read Flutter version from FVM config
-      - name: Read FVM config
-        id: fvm
+      - name: Verify Flutter Version
         run: |
-          FLUTTER_VERSION=$(cat .fvm/fvm_config.json | grep -o '"flutterSdkVersion": *"[^"]*"' | grep -o '"[^"]*"$' | tr -d '"')
-          echo "version=$FLUTTER_VERSION" >> $GITHUB_OUTPUT
-          echo "✅ Using Flutter version from FVM: $FLUTTER_VERSION"
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: ${{ steps.fvm.outputs.version }}
-          channel: 'stable'
-          cache: false
+          flutter --version
+          dart --version
 
       - name: Get Dependencies
         run: flutter pub get

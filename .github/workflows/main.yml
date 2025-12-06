@@ -11,87 +11,37 @@ on:
       - main
 
 jobs:
+  # ----------------------- FLUTTER CI -----------------------
   flutter_ci:
     runs-on: ubuntu-latest
     steps:
       # Checkout code
       - uses: actions/checkout@v3
 
-      # Clear Flutter cache (temporary - remove after first successful run)
-      - name: Clear Flutter cache
-        run: |
-          rm -rf $HOME/.flutter
-          rm -rf ${{ runner.tool_cache }}/flutter
-
       # Read Flutter version from FVM config
       - name: Read FVM config
         id: fvm
         run: |
-          FLUTTER_VERSION=$(cat .fvm/fvm_config.json | grep -o '"flutterSdkVersion": *"[^"]*"' | grep -o '"[^"]*"
-
-      # Setup Flutter with FVM version (NO CACHE!)
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: ${{ steps.fvm.outputs.version }}
-          channel: 'stable'
-          cache: false  
-
-      - name: Check Flutter Version
-        run: flutter --version
-
-      # NO PUB CACHE - حذفناها خالص!
-
-      # Install dependencies
-      - name: Get Dependencies
-        run: flutter pub get
-
-      # Run lint
-      - name: Lint
-        run: flutter analyze
-
-      # Check format (warning only)
-      - name: Format Check
-        run: dart format --set-exit-if-changed .
-        continue-on-error: true
-
-      # Determine if tests should run
-      - name: Should run tests?
-        id: test_check
-        run: |
-          FILES=$(git ls-files '*.dart' 'pubspec.yaml' 'pubspec.lock')
-          if echo "$FILES" | grep -E "lib/|pubspec.yaml|pubspec.lock"; then
-            echo "run_tests=true" >> $GITHUB_OUTPUT
-          else
-            echo "run_tests=false" >> $GITHUB_OUTPUT
-          fi
-
-      # Run Tests if needed
-      - name: Run Tests
-        if: steps.test_check.outputs.run_tests == 'true'
-        run: flutter test --coverage | tr -d '"')
+          FLUTTER_VERSION=$(cat .fvm/fvm_config.json | grep -o '"flutterSdkVersion": *"[^"]*"' | grep -o '"[^"]*"$' | tr -d '"')
           echo "version=$FLUTTER_VERSION" >> $GITHUB_OUTPUT
-          echo "✅ Using Flutter version from FVM: $FLUTTER_VERSION"
+          echo "✅ Target Flutter version from FVM: $FLUTTER_VERSION"
 
-      # Setup Flutter with FVM version
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: ${{ steps.fvm.outputs.version }}
-          channel: 'stable'
-          cache: true
+      # Download Flutter MANUALLY from Google Storage
+      - name: Download Flutter manually
+        run: |
+          FLUTTER_VERSION=${{ steps.fvm.outputs.version }}
+          echo "Downloading Flutter $FLUTTER_VERSION..."
+          
+          wget -q https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_${FLUTTER_VERSION}-stable.tar.xz
+          tar xf flutter_linux_${FLUTTER_VERSION}-stable.tar.xz
+          
+          echo "$GITHUB_WORKSPACE/flutter/bin" >> $GITHUB_PATH
+          echo "✅ Flutter downloaded and added to PATH"
 
-      - name: Check Flutter Version
-        run: flutter --version
-
-      # Cache Flutter packages
-      - name: Cache Pub Packages
-        uses: actions/cache@v3
-        with:
-          path: ~/.pub-cache
-          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-pub-
+      - name: Verify Flutter Version
+        run: |
+          flutter --version
+          dart --version
 
       # Install dependencies
       - name: Get Dependencies
