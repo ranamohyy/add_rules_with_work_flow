@@ -10,6 +10,7 @@ on:
       - develop
       - main
   # ----------------------- FLUTTER CI -----------------------
+jobs:
   flutter_ci:
     runs-on: ubuntu-latest
     steps:
