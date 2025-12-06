@@ -7,10 +7,15 @@ on:
 
 jobs:
   check_merge_source:
+    if: github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main'
     runs-on: ubuntu-latest
     steps:
       - name: Ensure PR to main comes from develop
         run: |
           if [ "${{ github.event.pull_request.head.ref }}" != "develop" ]; then
             echo "❌ You can only merge into main from develop!"
+            echo "Current source branch: ${{ github.event.pull_request.head.ref }}"
             exit 1
+          fi
+          echo "✅ Pull request from develop branch - approved"
+

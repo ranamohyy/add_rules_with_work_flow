@@ -1,39 +1,42 @@
 name: Flutter Lint & Tests
+
 on:
   push:
     branches:
       - "feature/**"
       - develop
-#    paths:
-#      - "lib/**"
-#      - "pubspec.yaml"
-#      - "pubspec.lock"
-#
   pull_request:
     branches:
       - develop
-
-jobs:
+      - main
+  # ----------------------- FLUTTER CI -----------------------
   flutter_ci:
     runs-on: ubuntu-latest
-
     steps:
       # Checkout code
       - uses: actions/checkout@v3
-      
-# Remove old Flutter cached installations
-      - name: Remove old Flutter cache
-        run: rm -rf $HOME/.flutter
 
-      # Setup Flutter
+      - name: Clear Flutter cache
+        run: |
+          rm -rf $HOME/.flutter
+          rm -rf ${{ runner.tool_cache }}/flutter
+
+      # Read Flutter version from FVM config
+      - name: Read FVM config
+        id: fvm
+        run: |
+          FLUTTER_VERSION=$(cat .fvm/fvm_config.json | grep -o '"flutterSdkVersion": *"[^"]*"' | grep -o '"[^"]*"$' | tr -d '"')
+          echo "version=$FLUTTER_VERSION" >> $GITHUB_OUTPUT
+          echo "✅ Using Flutter version from FVM: $FLUTTER_VERSION"
+
+      # Setup Flutter with FVM version
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.10.6' 
+          flutter-version: ${{ steps.fvm.outputs.version }}
           channel: 'stable'
           cache: true
 
-          
       - name: Check Flutter Version
         run: flutter --version
 
@@ -43,6 +46,7 @@ jobs:
         with:
           path: ~/.pub-cache
           key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
+
           restore-keys: |
             ${{ runner.os }}-pub-
 
@@ -59,7 +63,7 @@ jobs:
         run: dart format --set-exit-if-changed .
         continue-on-error: true
 
-      # Determine if tests should run (only if lib/ or pubspec changed)
+      # Determine if tests should run
       - name: Should run tests?
         id: test_check
         run: |
@@ -69,8 +73,8 @@ jobs:
           else
             echo "run_tests=false" >> $GITHUB_OUTPUT
           fi
+
       # Run Tests if needed
       - name: Run Tests
         if: steps.test_check.outputs.run_tests == 'true'
         run: flutter test --coverage
-
