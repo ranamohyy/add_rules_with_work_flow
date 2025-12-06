@@ -3,8 +3,8 @@ name: Build APK & iOS
 on:
   workflow_run:
     workflows: ["Flutter Lint & Tests"]
+    branches: [develop, main]
     types: [completed]
-
 
 jobs:
   # ----------------------- ANDROID BUILD -----------------------
@@ -15,6 +15,12 @@ jobs:
       - uses: actions/checkout@v3
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
+
+      # Clear Flutter cache (temporary - remove after first successful run)
+      - name: Clear Flutter cache
+        run: |
+          rm -rf $HOME/.flutter
+          rm -rf ${{ runner.tool_cache }}/flutter
 
       # Read Flutter version from FVM config
       - name: Read FVM config
@@ -29,13 +35,7 @@ jobs:
         with:
           flutter-version: ${{ steps.fvm.outputs.version }}
           channel: 'stable'
-          cache: true
-
-      - name: Cache Pub Packages
-        uses: actions/cache@v3
-        with:
-          path: ~/.pub-cache
-          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
+          cache: false
 
       - name: Get Dependencies
         run: flutter pub get
@@ -61,6 +61,12 @@ jobs:
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
 
+      # Clear Flutter cache (temporary - remove after first successful run)
+      - name: Clear Flutter cache
+        run: |
+          rm -rf $HOME/.flutter
+          rm -rf ${{ runner.tool_cache }}/flutter
+
       # Read Flutter version from FVM config
       - name: Read FVM config
         id: fvm
@@ -74,7 +80,7 @@ jobs:
         with:
           flutter-version: ${{ steps.fvm.outputs.version }}
           channel: 'stable'
-          cache: true
+          cache: false
 
       - name: Get Dependencies
         run: flutter pub get
