@@ -19,7 +19,7 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version-file: '3.27.1'
+          flutter-version-file: '3.27.0'
           cache: true
 
       - run: flutter --version
@@ -45,7 +45,7 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version-file: '3.27.1'
+          flutter-version-file: '3.27.0'
           cache: true
 
       - run: flutter --version
