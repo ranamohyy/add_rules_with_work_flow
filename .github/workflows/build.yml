@@ -7,7 +7,6 @@ on:
     types: [completed]
 
 jobs:
-  # ----------------------- ANDROID BUILD -----------------------
   build_android:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
@@ -16,47 +15,24 @@ jobs:
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
 
-      # Read Flutter version from FVM config
-      - name: Read FVM config
-        id: fvm
-        run: |
-          FLUTTER_VERSION=$(cat .fvm/fvm_config.json | grep -o '"flutterSdkVersion": *"[^"]*"' | grep -o '"[^"]*"$' | tr -d '"')
-          echo "version=$FLUTTER_VERSION" >> $GITHUB_OUTPUT
-          echo "✅ Target Flutter version from FVM: $FLUTTER_VERSION"
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version-file: .fvm/fvm_config.json
+          cache: true
 
-      # Download Flutter MANUALLY from Google Storage
-      - name: Download Flutter manually
-        run: |
-          FLUTTER_VERSION=${{ steps.fvm.outputs.version }}
-          echo "Downloading Flutter $FLUTTER_VERSION for Linux..."
-          
-          wget -q https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_${FLUTTER_VERSION}-stable.tar.xz
-          tar xf flutter_linux_${FLUTTER_VERSION}-stable.tar.xz
-          
-          echo "$GITHUB_WORKSPACE/flutter/bin" >> $GITHUB_PATH
-          echo "✅ Flutter downloaded and added to PATH"
+      - run: flutter --version
+      - run: dart --version
 
-      - name: Verify Flutter Version
-        run: |
-          flutter --version
-          dart --version
+      - run: flutter pub get
 
-      - name: Get Dependencies
-        run: flutter pub get
+      - run: flutter build apk --debug
+      - run: flutter build apk --release
 
-      - name: Build APK Debug
-        run: flutter build apk --debug
-
-      - name: Build APK Release
-        run: flutter build apk --release
-
-      - name: Upload APK Artifacts
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: apk-builds
           path: build/app/outputs/flutter-apk/*.apk
 
-  # ----------------------- IOS BUILD -----------------------
   build_ios:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: macos-latest
@@ -65,36 +41,24 @@ jobs:
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
 
-      # Read Flutter version from FVM config
-      - name: Read FVM config
-        id: fvm
-        run: |
-          FLUTTER_VERSION=$(cat .fvm/fvm_config.json | grep -o '"flutterSdkVersion": *"[^"]*"' | grep -o '"[^"]*"$' | tr -d '"')
-          echo "version=$FLUTTER_VERSION" >> $GITHUB_OUTPUT
-          echo "✅ Target Flutter version from FVM: $FLUTTER_VERSION"
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version-file: .fvm/fvm_config.json
+          cache: true
 
-      # Download Flutter MANUALLY for macOS
-      - name: Download Flutter manually
-        run: |
-          FLUTTER_VERSION=${{ steps.fvm.outputs.version }}
-          echo "Downloading Flutter $FLUTTER_VERSION for macOS..."
-          
-          wget -q https://storage.googleapis.com/flutter_infra_release/releases/stable/macos/flutter_macos_${FLUTTER_VERSION}-stable.zip
-          unzip -q flutter_macos_${FLUTTER_VERSION}-stable.zip
-          
-          echo "$GITHUB_WORKSPACE/flutter/bin" >> $GITHUB_PATH
-          echo "✅ Flutter downloaded and added to PATH"
+      - run: flutter --version
+      - run: dart --version
 
-      - name: Verify Flutter Version
-        run: |
-          flutter --version
-          dart --version
+      - run: flutter pub get
 
-      - name: Get Dependencies
-        run: flutter pub get
+      - run: flutter build ios --debug --no-codesign
+      - run: flutter build ios --release --no-codesign
 
-      - name: Build iOS Debug
-        run: flutter build ios --debug --no-codesign
+      - run: |
+          cd build/ios/iphoneos
+          tar -czf Runner.app.tar.gz Runner.app
 
-      - name: Build iOS Release
-        run: flutter build ios --release --no-codesign
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ios-builds
+          path: build/ios/iphoneos/Runner.app.tar.gz
