@@ -1,10 +1,11 @@
 name: Build APK & iOS
 
 on:
-  workflow_run:
-    workflows: ["Flutter Lint & Tests"]
-    branches: [develop, main]
-    types: [completed]
+  push:
+  # workflow_run:
+  #   workflows: ["Flutter Lint & Tests"]
+  #   branches: [develop, main]
+  #   types: [completed]
 
 jobs:
   build_android:
