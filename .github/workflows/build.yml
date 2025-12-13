@@ -1,86 +1,64 @@
 name: Build APK & iOS
+
 on:
   workflow_run:
     workflows: ["Flutter Lint & Tests"]
-    types:
-      - completed
-    # branches:  
-    #   - develop
-    #   - "feature/**"
+    branches: [develop, main]
+    types: [completed]
 
 jobs:
-  build_apk:
+  build_android:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
-    
     steps:
       - uses: actions/checkout@v3
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
 
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.4' 
+          flutter-version-file: .fvm/fvm_config.json
+          cache: true
 
-      - name: Cache Pub Packages
-        uses: actions/cache@v3
-        with:
-          path: ~/.pub-cache
-          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-pub-
+      - run: flutter --version
+      - run: dart --version
 
-      - name: Get Dependencies
-        run: flutter pub get
+      - run: flutter pub get
 
-      - name: Build APK Debug
-        run: flutter build apk --debug
+      - run: flutter build apk --debug
+      - run: flutter build apk --release
 
-      - name: Build APK Release
-        run: flutter build apk --release
-
-      - name: Upload APK Artifacts
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: apk-builds
-          path: |
-            build/app/outputs/flutter-apk/*.apk
+          path: build/app/outputs/flutter-apk/*.apk
 
   build_ios:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
-    runs-on: macos-latest 
-    
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
 
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.0'
+          flutter-version-file: .fvm/fvm_config.json
+          cache: true
 
-      - name: Cache Pub Packages
-        uses: actions/cache@v3
-        with:
-          path: ~/.pub-cache
-          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-pub-
+      - run: flutter --version
+      - run: dart --version
 
-      - name: Get Dependencies
-        run: flutter pub get
+      - run: flutter pub get
 
-      - name: Build iOS Debug
-        run: flutter build ios --debug --no-codesign
+      - run: flutter build ios --debug --no-codesign
+      - run: flutter build ios --release --no-codesign
 
-      - name: Build iOS Release
-        run: flutter build ios --release --no-codesign
+      - run: |
+          cd build/ios/iphoneos
+          tar -czf Runner.app.tar.gz Runner.app
 
-      - name: Upload iOS Artifacts
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: ios-builds
-          path: |
-            build/ios/iphoneos/*.app
+          path: build/ios/iphoneos/Runner.app.tar.gz
